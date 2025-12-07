@@ -10,4 +10,5 @@ public interface UserService {
     UserResponse getUserById(Long id);
     UserResponse saveOrUpdateUser(UserRequest user);
     PageResponse<UserResponse> searchUsers(String keyword, int page, int size);
+    void deleteUser(Long id);
 }

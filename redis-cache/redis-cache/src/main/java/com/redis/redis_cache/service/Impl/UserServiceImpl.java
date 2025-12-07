@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -37,34 +38,62 @@ public class UserServiceImpl implements UserService {
     @Override
     @Cacheable(value = CacheConst.CACHE_USER_DETAIL, key = "#id")
     public UserResponse getUserById(Long id) {
-        // Giả lập độ trễ DB (để bạn thấy rõ sự khác biệt khi có cache)
-        try { Thread.sleep(3000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        // Giả lập độ trễ DB cho mục đích DEMO ONLY
+        simulateDbLatency();
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        
+        log.info("Fetched user from DB (cache miss): {}", id);
         return userMapper.entityToResponse(user);
     }
 
     @Override
+    @CachePut(value = CacheConst.CACHE_USER_DETAIL, key = "#result.id", condition = "#result != null")
     public UserResponse saveOrUpdateUser(UserRequest user) {
         User savedUser = userRepository.save(userMapper.requestToEntity(user));
         UserResponse response = userMapper.entityToResponse(savedUser);
-        //trả ra sự kiện
+        
+        // Publish event để xóa cache list có liên quan
         eventPublisher.publishEvent(new UserSavedEvent(this, response));
-
+        
+        log.info("User saved/updated và cache đã được refresh: {}", response.getId());
         return response;
     }
 
     @Override
     @Cacheable(value = CacheConst.CACHE_USER_LIST, key = "'search:' + #keyword + '-page:' + #page + '-size:' + #size")
     public PageResponse<UserResponse> searchUsers(String keyword, int page, int size) {
-        try { Thread.sleep(3000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        // Giả lập độ trễ DB cho mục đích DEMO ONLY
+        simulateDbLatency();
 
         Pageable pageable = PageRequest.of(page, size);
         Page<User> pageData = userRepository.findByUsernameContainingIgnoreCase(keyword, pageable);
-
-        return pageMapper.pageToResponse(pageData,page,size);
+        
+        log.info("Search users from DB (cache miss): keyword={}, page={}, size={}", keyword, page, size);
+        return pageMapper.pageToResponse(pageData, page, size);
     }
 
 
+    private void simulateDbLatency() {
+        try {
+            Thread.sleep(3000); //3 giây
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    @Override
+    @CacheEvict(value = CacheConst.CACHE_USER_DETAIL, key = "#id")
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        
+        userRepository.delete(user);
+        log.info("User deleted and cache evicted: {}", id);
+        
+        // Publish event để xóa cache search có liên quan
+        UserResponse response = userMapper.entityToResponse(user);
+        eventPublisher.publishEvent(new UserSavedEvent(this, response));
+    }
 }

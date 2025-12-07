@@ -41,4 +41,10 @@ public class UserController {
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(userService.searchUsers(keyword, page, size));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
 }
