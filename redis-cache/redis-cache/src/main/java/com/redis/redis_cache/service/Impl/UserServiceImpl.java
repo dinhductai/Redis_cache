@@ -38,7 +38,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @CacheEvict(value = "users", key = "#user.id")
+    @CacheEvict(value = "users", key = "#user.id", condition = "#user.id != null")
     public UserResponse saveOrUpdateUser(UserRequest user) {
         log.info("Saving User ID: {}. Evicting cache...", user.getId());
 
