@@ -1,6 +1,7 @@
 package com.redis.redis_cache.controller;
 
 import com.redis.redis_cache.dto.request.UserRequest;
+import com.redis.redis_cache.dto.response.PageResponse;
 import com.redis.redis_cache.dto.response.UserResponse;
 import com.redis.redis_cache.service.UserService;
 import lombok.AccessLevel;
@@ -31,5 +32,13 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUser(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<PageResponse<UserResponse>> searchUsers(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(userService.searchUsers(keyword, page, size));
     }
 }
