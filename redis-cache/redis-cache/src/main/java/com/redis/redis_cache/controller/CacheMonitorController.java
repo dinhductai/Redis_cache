@@ -22,7 +22,7 @@ public class CacheMonitorController {
         stats.put("timestamp", System.currentTimeMillis());
         return ResponseEntity.ok(stats);
     }
-    
+
 
     @GetMapping("/clear-all")
     public ResponseEntity<Map<String, Object>> clearAllCaches() {
